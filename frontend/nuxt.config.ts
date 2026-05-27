@@ -4,10 +4,10 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   runtimeConfig: {
     public: {
-      apiBase: process.env.API_URL || 'http://localhost:3000'
+      // Se cambia API_URL por NUXT_PUBLIC_API_BASE para que coincida con la variable de Railway
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:3000'
     }
   },
-  // Agregamos esto para cambiar el puerto:
   devServer: {
     port: 3001
   }
