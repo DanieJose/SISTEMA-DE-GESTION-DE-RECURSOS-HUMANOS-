@@ -30,18 +30,34 @@ const allowedOrigins = [
   'https://reliable-essence-production.up.railway.app'
 ];
 
+// --- CONFIGURACIÓN DE MIDDLEWARES ---
+app.use(express.json()); 
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Configuración de CORS corregida y más permisiva para producción
 app.use(cors({
   origin: function (origin, callback) {
-    // Permite peticiones sin origen (como Postman o curl) o desde los dominios permitidos
+    // Esto permite peticiones desde tu frontend en Railway, tu localhost, 
+    // y también herramientas como Postman que no envían un encabezado 'origin'
+    const allowedOrigins = [
+      'http://localhost:3001',
+      'http://localhost:3000',
+      'https://reliable-essence-production.up.railway.app'
+    ];
+    
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       callback(new Error('No permitido por CORS'));
     }
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
+
+// Responder a las peticiones OPTIONS (preflight)
+app.options('*', cors());
 
 // --- CONEXIÓN A LA BASE DE DATOS ---
 const db = mysql.createConnection({
