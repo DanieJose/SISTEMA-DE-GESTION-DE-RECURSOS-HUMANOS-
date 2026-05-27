@@ -24,11 +24,23 @@ const app = express();
 app.use(express.json()); 
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Configuración de CORS para el puerto del Frontend (3001)
+// Configuración de CORS dinámica
+const allowedOrigins = [
+  'http://localhost:3001',
+  'https://reliable-essence-production.up.railway.app'
+];
+
 app.use(cors({
-    origin: 'http://localhost:3001',
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    credentials: true
+  origin: function (origin, callback) {
+    // Permite peticiones sin origen (como Postman o curl) o desde los dominios permitidos
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('No permitido por CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
 }));
 
 // --- CONEXIÓN A LA BASE DE DATOS ---
@@ -53,7 +65,6 @@ db.connect((err) => {
 app.set('db', db);
 
 // --- DEFINICIÓN DE RUTAS API ---
-
 app.use('/api/auth', authRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/empleados', empleadoRoutes);
@@ -67,21 +78,19 @@ app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/biblioteca', bibliotecaRoutes);
 app.use('/api/logs', logsRoutes);
 
-// 1. OBTENER MENÚ DINÁMICO (Rutas corregidas)
+// 1. OBTENER MENÚ DINÁMICO
 app.get('/api/menu/:rol_id', (req, res) => {
     const { rol_id } = req.params;
     
-    // MENÚ BASE
     let menu = [
         { nombre: 'Dashboard', ruta: '/', icono: '🏠' },
         { nombre: 'Tickets', ruta: '/tickets', icono: '🎫' }
     ];
 
-    // MÓDULOS DE RECURSOS HUMANOS (Super Admin y RRHH)
     if (rol_id == 1 || rol_id == 2) {
         menu.push(
             { nombre: 'Empleados', ruta: '/empleados', icono: '👥' },
-            { nombre: 'Nuevo Empleado', ruta: '/empleados/nuevo', icono: '👤+' }, // RUTA EXACTA
+            { nombre: 'Nuevo Empleado', ruta: '/empleados/nuevo', icono: '👤+' },
             { nombre: 'Registrar Vacaciones', ruta: '/vacaciones', icono: '🏖️' },
             { nombre: 'Departamentos', ruta: '/departamentos', icono: '🏢' },
             { nombre: 'Reportes', ruta: '/reportes', icono: '📊' },
@@ -89,7 +98,6 @@ app.get('/api/menu/:rol_id', (req, res) => {
         );
     }
 
-    // MÓDULOS EXCLUSIVOS DE IT SUPER ADMIN
     if (rol_id == 1) {
         menu.push(
             { nombre: 'Gestión Manuales', ruta: '/admin/manuales', icono: '📚' },
@@ -100,7 +108,7 @@ app.get('/api/menu/:rol_id', (req, res) => {
     res.json(menu);
 });
 
-// 2. ESTADÍSTICAS PARA LAS TARJETAS DEL DASHBOARD
+// 2. ESTADÍSTICAS PARA EL DASHBOARD
 app.get('/api/stats/resumen', (req, res) => {
     const sql = `
         SELECT 
@@ -131,7 +139,6 @@ app.get('/api/stats/dashboard-lists', (req, res) => {
         if (pending === 0) res.json(lists);
     };
 
-    // 1. Cumpleañeros
     let cumplesQuery = "SELECT id, nombre, apellido, fecha_nacimiento, foto FROM empleados WHERE MONTH(fecha_nacimiento) = MONTH(CURRENT_DATE) AND estado = 1 ORDER BY DAY(fecha_nacimiento)";
     let cumplesParams = [];
     
@@ -145,7 +152,6 @@ app.get('/api/stats/dashboard-lists', (req, res) => {
         checkDone(err);
     });
 
-    // 2. Vencimientos de contratos
     let vencimientosQuery = "SELECT c.id, e.id as empleado_id, e.nombre, e.apellido, e.foto, c.fechaFinal, c.tipoContrato FROM contratos c JOIN empleados e ON c.empleado_id = e.id WHERE c.id IN (SELECT max_id FROM (SELECT MAX(id) AS max_id FROM contratos GROUP BY empleado_id) AS sub) AND c.fechaFinal BETWEEN CURRENT_DATE AND DATE_ADD(CURRENT_DATE, INTERVAL 30 DAY) AND e.estado = 1 ORDER BY c.fechaFinal ASC";
     let vencimientosParams = [];
 
@@ -161,20 +167,17 @@ app.get('/api/stats/dashboard-lists', (req, res) => {
         checkDone(err);
     });
 
-    // 3. Empleados activos
     db.query("SELECT id, nombre, apellido, codigo_empleado, foto FROM empleados WHERE estado = 1 ORDER BY nombre, apellido", (err, results) => {
         if (!err) lists.activos = results;
         checkDone(err);
     });
 
-    // 4. Empleados inactivos
     db.query("SELECT id, nombre, apellido, codigo_empleado, foto FROM empleados WHERE estado = 0 ORDER BY nombre, apellido", (err, results) => {
         if (!err) lists.inactivos = results;
         checkDone(err);
     });
 });
 
-// 3. SISTEMA DE NOTIFICACIONES
 app.get('/api/notificaciones/:usuario_id', (req, res) => {
     const { usuario_id } = req.params;
     const sql = `
@@ -200,7 +203,7 @@ app.put('/api/notificaciones/leer/:usuario_id', (req, res) => {
     });
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor RRHH Innova en: http://localhost:${PORT}`);
+    console.log(`🚀 Servidor RRHH Innova corriendo en puerto ${PORT}`);
 });
