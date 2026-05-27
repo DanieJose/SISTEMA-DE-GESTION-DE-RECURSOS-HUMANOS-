@@ -207,7 +207,10 @@ app.put('/api/notificaciones/leer/:usuario_id', (req, res) => {
     });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+// ... (resto de tu código)
+
+// CORRECCIÓN: Asegurar que se use el puerto asignado por Railway
+const PORT = process.env.PORT || 3000; 
+app.listen(PORT, '0.0.0.0', () => { // <--- Agrega '0.0.0.0' aquí
     console.log(`🚀 Servidor RRHH Innova corriendo en puerto ${PORT}`);
 });
