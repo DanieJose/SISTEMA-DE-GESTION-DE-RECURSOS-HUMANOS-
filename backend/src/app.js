@@ -24,40 +24,28 @@ const app = express();
 app.use(express.json()); 
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Configuración de CORS dinámica
-const allowedOrigins = [
-  'http://localhost:3001',
-  'https://reliable-essence-production.up.railway.app'
-];
+// CORRECCIÓN DEFINITIVA DE CORS
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    'http://localhost:3001',
+    'http://localhost:3000',
+    'https://reliable-essence-production.up.railway.app'
+  ];
+  const origin = req.headers.origin;
+  
+  if (!origin || allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  }
+  
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
 
-// --- CONFIGURACIÓN DE MIDDLEWARES ---
-app.use(express.json()); 
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-
-// Configuración de CORS corregida y más permisiva para producción
-app.use(cors({
-  origin: function (origin, callback) {
-    // Esto permite peticiones desde tu frontend en Railway, tu localhost, 
-    // y también herramientas como Postman que no envían un encabezado 'origin'
-    const allowedOrigins = [
-      'http://localhost:3001',
-      'http://localhost:3000',
-      'https://reliable-essence-production.up.railway.app'
-    ];
-    
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('No permitido por CORS'));
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
-
-// Responder a las peticiones OPTIONS (preflight)
-app.options('*', cors());
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 // --- CONEXIÓN A LA BASE DE DATOS ---
 const db = mysql.createConnection({
